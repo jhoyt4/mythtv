@@ -1,0 +1,30 @@
+#!/bin/sh
+
+# This script sets the Python and Mythtv paths
+
+# get the directory of the calling funcitons
+BASEDIR=$(dirname $0)
+if [ ${BASEDIR:0:1} = "." ] ;then
+  BASEDIR=$(pwd)/${BASEDIR:2}
+fi
+
+# get the location of the APP_BUNDLE
+cd $BASEDIR
+cd ../..
+APP_DIR=$(pwd)
+
+# Find python3 and set the path
+PYTHON_EXE=$(readlink -f Contents/MacOS/python3)
+PYTHON_EXE=$(basename $PYTHON_EXE)
+PYTHON_NO_DOT=${PYTHON_EXE//.}
+
+PYTHON_BASE_PATH=$APP_DIR/Contents/Resources/lib/$PYTHON_EXE
+
+export PYTHONPATH=$PYTHON_BASE_PATH:$PYTHON_BASE_PATH/$PYTHON_NO_DOT.zip:$PYTHON_BASE_PATH/site-packages:$PYTHON_BASE_PATH/sites-enabled:$PYTHON_BASE_PATH/lib-dynload
+PATH=$(pwd):$PATH
+
+# set the mythtv share dir
+export MYTHTVDIR="$APP_DIR/Contents/Resources"
+
+cd $BASEDIR
+./mythbackend $@

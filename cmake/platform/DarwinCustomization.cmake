@@ -123,3 +123,8 @@ if("${CMAKE_C_COMPILER}" MATCHES "Xcode")
     )
   endif()
 endif()
+
+# if we're signing an application, at least one bundle must be enables
+if (DARWIN_GENERATE_DISTRIBUTION AND NOT DARWIN_BACKEND_BUNDLE AND NOT DARWIN_FRONTEND_BUNDLE)
+  message(FATAL_ERROR "Error: Generating a Drag And Drop Installer requires at least one App Bundle to be made.")
+endif()
