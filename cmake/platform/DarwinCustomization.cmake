@@ -63,8 +63,10 @@ elseif(DETECT_HOMEBREW EQUAL 0)
   list(APPEND FF_PLATFORM_ARGS "--extra-ldflags=-L${HOMEBREW_PREFIX}/lib"
        "--extra-cflags=-I${HOMEBREW_PREFIX}/include")
 
-  # Qt6 builds need a little help finding the libraries.
-  set(_QT_BASE "${HOMEBREW_PREFIX}/opt/${QT_PKG_NAME_LC}")
+  # Homebrew needs a little help finding the QT libraries due to the the HB
+  # naming convention which uses an @ symbol
+  set(QT_PKG_NAME_HB "qt@${QT_VERSION_MAJOR}")
+  set(_QT_BASE "${HOMEBREW_PREFIX}/opt/${QT_PKG_NAME_HB}")
 
   # Provide the default Homebrew location for Python3, if the the user hasn't
   # already specified a value in their options override file. This prevents
@@ -122,4 +124,9 @@ if("${CMAKE_C_COMPILER}" MATCHES "Xcode")
       "--extra-cflags=-I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include"
     )
   endif()
+endif()
+
+# if we're signing an application, at least one bundle must be enabled
+if (DARWIN_GENERATE_DISTRIBUTION AND NOT DARWIN_BACKEND_BUNDLE AND NOT DARWIN_FRONTEND_BUNDLE)
+  message(FATAL_ERROR "Error: Generating a Drag And Drop Installer requires at least one App Bundle to be made.")
 endif()
