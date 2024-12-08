@@ -510,8 +510,6 @@ add_custom_command(
 #
 
 #
-# Add missing Fields to the Info.plist file
-#   CSResourcesFileMapped maps the file resources into memory the application to see the the filesystem
 # See the following site for more details on Info.plist entries:
 #   https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Introduction/Introduction.html
 #
@@ -557,7 +555,7 @@ if(DARWIN_GENERATE_DISTRIBUTION)
 
   # Custom Inputs to Bundle
   set(CPACK_BUNDLE_NAME ${APP_NAME})
-  set(CPACK_BUNDLE_STARTUP_COMMAND ${APP_NAME.sh})
+  set(CPACK_BUNDLE_STARTUP_COMMAND ${CMAKE_SOURCE_DIR}/${APP_NAME}.sh)
   set(CPACK_APPLE_BUNDLE_ID ${MACOSX_BUNDLE_GUI_IDENTIFIER})
   set(CPACK_BUNDLE_PLIST ${PLIST_FILE})
   set(CPACK_BUNDLE_ICON_FILE "${CMAKE_SOURCE_DIR}/${APP_NAME}.icns}")
