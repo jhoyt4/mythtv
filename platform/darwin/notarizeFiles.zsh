@@ -24,6 +24,8 @@ if [[ -z $KEYCHAIN_PROFILE ]]; then
   echo "      --password YOUR_APP_PWD\n"
   echo "The App Identifier can be obtained at https://developer.apple.com/"
   echo "    (Account -> Certificates, Identifiers & Profiles -> Identifiers -> + -> App IDs)"
+  echo "The Team ID can be obtained at https://developer.apple.com/account"
+  echo "    Account -> Scroll down to Membership Details -> Look for Team ID"
   echo "The App Password can be obtained at https://appleid.apple.com/account/manage"
   echo "    (Sign In -> APP-SPECIFIC PASSWORDS -> + )"
   exit 2
