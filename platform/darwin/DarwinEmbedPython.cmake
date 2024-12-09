@@ -12,6 +12,9 @@ endif()
 # variables also need to be set.  Start by locating Python for embedding the 
 # correct version from build time
 # Assumes these are set before calling
+#   APP_NAME
+#   MYTHTV_INSTALL_PREFIX
+#   RSRC_DIR
 #   PYTHON_ROOT_DIR
 #   PYTHON_DOT_FULLPATH_EXE
 #   PYTHON_VERSION
@@ -31,59 +34,70 @@ endif()
 #   PYTHON_SOURCE_LIB
 #   PYTHON_SOURCE_DYLIB
 
+message(STATUS "Create Python file structure")
 
-message(STATUS "Copying Python Resources")
+# create the necessary file structure
+file(MAKE_DIRECTORY ${PYTHON_RSRC_INC_DIR}/${PYTHON_EXE} ${PYTHON_RSRC_LIB_DIR})
+file(MAKE_DIRECTORY ${PYTHON_FMWK_DIR} ${PYTHON_FMWK_ROOT} ${PYTHON_FMWK_ROOT}/Resources ${PYTHON_FMWK_INC_DIR}/)
+
 #
 # Resources/include
-#
-file(MAKE_DIRECTORY ${PYTHON_RSRC_INC_DIR}/${PYTHON_EXE})
-
-# Copy pyconfig.h files into Resources/include/pythonX.x
+# Copy pyconfig.h files into Resources/include/pythonX.X
 file(COPY "${PYTHON_SOURCE_INC}/pyconfig.h" DESTINATION ${PYTHON_RSRC_INC_DIR}/${PYTHON_EXE})
 
 #
 # Resources/lib/
 #
-file(MAKE_DIRECTORY ${PYTHON_RSRC_LIB_DIR})
-
-
 # Copy lib files into Resources/lib
-file(COPY "${PYTHON_SOURCE_LIB}" DESTINATION ${PYTHON_RSRC_LIB_DIR}/
-  PATTERN "pip" EXCLUDE
-  PATTERN "py2app" EXCLUDE
-  PATTERN "virtualenv" EXCLUDE
-  PATTERN "yaml" EXCLUDE)
+file(COPY "${PYTHON_SOURCE_LIB}/" DESTINATION ${PYTHON_RSRC_LIB_DIR}
+  PATTERN "*ansible*" EXCLUDE
+  PATTERN "*lint*" EXCLUDE
+  PATTERN "*mark*" EXCLUDE
+  PATTERN "*Mark*" EXCLUDE
+  PATTERN "*pip*" EXCLUDE
+  PATTERN "*py2app*" EXCLUDE
+  PATTERN "*venv*" EXCLUDE
+  PATTERN "*virtualenv*" EXCLUDE
+  PATTERN "*YAML*" EXCLUDE
+  PATTERN "*yaml*" EXCLUDE)
+execute_process(
+  COMMAND ${CMAKE_COMMAND} -E create_symlink "${PYTHON_EXE}" "${RSRC_DIR}/lib/python"
+  COMMAND ${CMAKE_COMMAND} -E create_symlink "${PYTHON_EXE}" "${RSRC_DIR}/lib/python3")
 
 # If a virtual environment has been created, copy the bin and site-packages
 # into the portable python-framework
 if(NOT PYTHON_VENV_PATH STREQUAL "")
-  file(COPY ${PYTHON_VENV_PATH}/lib/${PYTHON_EXE} DESTINATION ${PYTHON_RSRC_LIB_DIR}
-    PATTERN "pip" EXCLUDE
-    PATTERN "py2app" EXCLUDE
-    PATTERN "virtualenv" EXCLUDE
-    PATTERN "yaml" EXCLUDE)
+  file(COPY ${PYTHON_VENV_PATH}/ DESTINATION ${PYTHON_RSRC_LIB_DIR}
+    PATTERN "*ansible*" EXCLUDE
+    PATTERN "*lint*" EXCLUDE
+    PATTERN "*mark*" EXCLUDE
+    PATTERN "*Mark*" EXCLUDE
+    PATTERN "*pip*" EXCLUDE
+    PATTERN "*py2app*" EXCLUDE
+    PATTERN "*venv*" EXCLUDE
+    PATTERN "*virtualenv*" EXCLUDE
+    PATTERN "*YAML*" EXCLUDE
+    PATTERN "*yaml*" EXCLUDE)
 endif()
 
-# Create Resource symlinks
+# find python .so files located in the Resources directory
 execute_process(
-  COMMAND ${CMAKE_COMMAND} -E create_symlink "${PYTHON_EXE}" "${PYTHON_RSRC_LIB_DIR}/python")
+    COMMAND zsh -c "find ${PYTHON_RSRC_LIB_DIR} -name \"*.so\""
+    OUTPUT_VARIABLE PYTHON_SOS_FOUND
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+string(REPLACE "\n" ";" PYTHON_SOS_FOUND ${PYTHON_SOS_FOUND})
+list(TRANSFORM PYTHON_SOS_FOUND STRIP)
+list(REMOVE_DUPLICATES PYTHON_SOS_FOUND)
 
 #
 # Framework (Framework/Python.framework)
 #
 message(STATUS "Creating the Framework")
-# Create the initial Framework structure
-file(MAKE_DIRECTORY ${PYTHON_FMWK_DIR} ${PYTHON_FMWK_ROOT} ${PYTHON_FMWK_ROOT}/Resources ${PYTHON_FMWK_INC_DIR}/${PYTHON_EXE})
-
 # Copy the pyconfig.h files into the Python Framework's include dir
 file(COPY ${PYTHON_ROOT_DIR}/include/${PYTHON_EXE}/pyconfig.h DESTINATION ${PYTHON_FMWK_INC_DIR}/${PYTHON_EXE}/)
 
 # Copy the Info.plist into Python Framework Resources dir
 file(COPY "${PYTHON_ROOT_DIR}/Resources/Info.plist" DESTINATION ${PYTHON_FMWK_ROOT}/Resources)
-
-#
-# NOTE: The actual Python library needs be copied after the target is created
-#
 
 # Create Framework symlinks
 execute_process(
@@ -92,8 +106,34 @@ execute_process(
   COMMAND ${CMAKE_COMMAND} -E create_symlink "Versions/Current/Resources" "${PYTHON_FMWK_DIR}/Resources"
   COMMAND ${CMAKE_COMMAND} -E create_symlink "${PYTHON_DOT_VERSION}" "${PYTHON_FMWK_DIR}/Versions/Current")
 
-message(STATUS "Copying Python executable")
+#
+# Copy in the python library and executables
+# NOTE: The actual Python library and executable need be copied post_build
+#
+add_custom_command(
+  TARGET ${APP_NAME} POST_BUILD
+  COMMENT "Copying in python library and executable"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PYTHON_SOURCE_DYLIB}" "${PYTHON_FMWK_FULL_DYLIB}"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PYTHON_SOURCE_EXE}" "${PYTHON_DEST_EXE}")
+
+
+# The python executable needs its linked libraries updated to the embedded framework
+# use otool to find the old links and install_name_tool to update them
+execute_process(
+  COMMAND zsh -c "otool -L \"${PYTHON_SOURCE_EXE}\" | grep -e 'Python (' | sed 's@\ (.*@@'"
+    OUTPUT_VARIABLE OTOOL_OUT
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+string(REPLACE "\t" "" OTOOL_OUT ${OTOOL_OUT})
+add_custom_command(
+  TARGET ${APP_NAME} POST_BUILD
+  COMMENT "Update the python executable to use the embedded framework"
+  COMMAND install_name_tool -change ${OTOOL_OUT} "@executable_path/../Frameworks/Python.framework/Versions/${PYTHON_DOT_VERSION}/Python" ${PYTHON_DEST_EXE})
 
 #
-# NOTE:The actual Python executable needs be copied after the target is created
+# create python symlinks
 #
+add_custom_command(
+  TARGET ${APP_NAME} POST_BUILD
+  COMMENT "Creating python symlinks"
+  COMMAND ${CMAKE_COMMAND} -E create_symlink "${PYTHON_EXE}" ${MACOS_DIR}/python
+  COMMAND ${CMAKE_COMMAND} -E create_symlink "${PYTHON_EXE}" ${MACOS_DIR}/python3)

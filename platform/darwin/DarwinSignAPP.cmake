@@ -7,15 +7,17 @@ if(NOT APPLE)
   return()
 endif()
 
+# CPACK overwrites the previously generated Info.plist, so it needs to be corrected
+set(APP_FILE ${CPACK_TEMPORARY_DIRECTORY}/${CPACK_PACKAGE_NAME}.app)
+set(PLIST_FILE "${APP_FILE}/Contents/Info.plist")
+
 if(DARWIN_SIGNING_ID STREQUAL "")
   return()
 endif()
 
-set(APP ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/${CPACK_PACKAGING_INSTALL_PREFIX})
-
 message(STATUS "Signing the Application")
 execute_process(
-  COMMAND zsh -c "${CMAKE_CURRENT_LIST_DIR}/codesignApp.zsh ${APP} \"${CPACK_DARWIN_SIGNING_ID}\" ${CPACK_ENTITLEMENTS_PLIST}"
+  COMMAND zsh -c "${CMAKE_CURRENT_LIST_DIR}/codesignApp.zsh ${APP_FILE} \"${CPACK_DARWIN_SIGNING_ID}\" ${CPACK_ENTITLEMENTS_PLIST}"
   RESULT_VARIABLE CS_OUT)
 
 if(NOT CS_OUT EQUAL 0)
@@ -26,7 +28,7 @@ endif()
 if(NOT DARWIN_NOTARIZATION_KEYCHAIN STREQUAL "")
   message(STATUS "Notarizing the Application")
   execute_process(
-    COMMAND zsh -c "${CMAKE_CURRENT_LIST_DIR}/notarizeFiles.zsh ${APP} ${CPACK_DARWIN_NOTARIZATION_KEYCHAIN}"
+    COMMAND zsh -c "${CMAKE_CURRENT_LIST_DIR}/notarizeFiles.zsh ${APP_FILE} ${CPACK_DARWIN_NOTARIZATION_KEYCHAIN}"
     RESULT_VARIABLE NOTA_OUT)
 endif()
 

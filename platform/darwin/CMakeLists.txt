@@ -162,32 +162,27 @@ set(PYTHON_EXE python${PYTHON_DOT_VERSION})
 set(PYTHON_VERSION ${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR})
 set(PYTHON_FMWK_DIR ${FMWK_DIR}/Python.framework)
 set(PYTHON_FMWK_ROOT ${PYTHON_FMWK_DIR}/Versions/${PYTHON_DOT_VERSION})
-set(PYTHON_RSRC_INC_DIR ${RSRC_DIR}/include)
-set(PYTHON_RSRC_LIB_DIR ${RSRC_DIR}/lib)
+set(PYTHON_RSRC_INC_DIR ${RSRC_DIR}/include/${PYTHON_EXE})
+set(PYTHON_RSRC_LIB_DIR ${RSRC_DIR}/lib/${PYTHON_EXE})
 set(PYTHON_FMWK_INC_DIR ${PYTHON_FMWK_ROOT}/include)
 set(PYTHON_FMWK_LIB_DIR ${PYTHON_FMWK_ROOT}/lib)
 set(PYTHON_DEST_EXE ${MACOS_DIR}/${PYTHON_EXE})
 set(PYTHON_FMWK_FULL_DYLIB ${PYTHON_FMWK_ROOT}/Python)
-set(PYTHON_VENV_PATH $ENV{VIRTUAL_ENV})
+set(PYTHON_VENV_PATH $ENV{VIRTUAL_ENV}/lib/${PYTHON_EXE})
 set(PYTHON_SOURCE_EXE ${PYTHON_ROOT_DIR}/Resources/Python.app/Contents/MacOS/Python)
 set(PYTHON_SOURCE_INC ${PYTHON_ROOT_DIR}/include/${PYTHON_EXE})
 set(PYTHON_SOURCE_LIB ${PYTHON_ROOT_DIR}/lib/${PYTHON_EXE})
 set(PYTHON_SOURCE_DYLIB ${PYTHON_ROOT_DIR}/Python)
 
-
-# NOTE: the python executable must live in the MacOS directory to allow correct 
+# Create a variable to point to the python executable that lives in the MacOS directory to allow correct 
 # pathing to the embedded python support libraries
 string(REPLACE "${PYTHON_EXE}" "python${Python3_VERSION_MAJOR}" PYTHON_MYTHTV_SCRIPT_EXE ${PYTHON_DOT_FULLPATH_EXE})
 
 #
-# Activate the MacOS Bundling
+# Activate the MacOS Bundling and set bundle version variables
 #
 message(STATUS "Setting up App Bundle structure and variables")
 set(MACOSX_BUNDLE TRUE)
-
-#
-# Set required app bundle version variables
-#
 string(TIMESTAMP YEARSTAMP "%Y")
 set(MACOSX_BUNDLE_BUNDLE_NAME ${APP_NAME})
 set(MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
@@ -213,8 +208,18 @@ endif()
 message(STATUS "Copying in MythTV support files")
 file(COPY ${MYTHTV_FULL_DATADIR} DESTINATION ${RSRC_DIR}/share)
 
+# Update the files in share (e.g. python shebang's) to point to internally to the App
+# Run theses as two separate commands in case the first fails for some reason...
+execute_process(
+  COMMAND zsh -c "LC_ALL=C  find ${RSRC_DIR} -type f -exec sed -i '' \"s@${PYTHON_MYTHTV_SCRIPT_EXE}@${PYTHON_EXE}@g\" {} + ")
+execute_process(
+  COMMAND zsh -c "LC_ALL=C  find ${RSRC_DIR} -type f -exec sed -i '' \"s@${MYTHTV_INSTALL_PREFIX}@../Resources@g\" {} + ")
+
 # Copy the perl support files into Resources/lib.
 file(COPY ${MYTHTV_INSTALL_PREFIX}/lib/perl5 DESTINATION ${RSRC_DIR}/lib)
+
+# Copy the python support files into Resources/lib.
+file(COPY ${MYTHTV_INSTALL_PREFIX}/lib/${PYTHON_EXE} DESTINATION ${RSRC_DIR}/lib)
 
 # Copy the application icon into the Resources directory.
 file(COPY ${APP_NAME}.icns DESTINATION ${RSRC_DIR})
@@ -231,23 +236,6 @@ string(REPLACE "\n" ";" FONT_LIST ${FONT_LIST})
 foreach(FONT ${FONT_LIST})
     file(COPY ${FONT} DESTINATION ${RSRC_DIR}/share/mythtv/fonts)
 endforeach()
-
-#
-# create a portable python framework
-# This needs to be done after the App bundle variables and structure are established
-#
-message(STATUS "Generating a Portable Python Framework")
-include(DarwinEmbedPython.cmake)
-
-# copy the mythtv python site-packages into the python framework
-file(COPY ${MYTHTV_INSTALL_PREFIX}/lib/${PYTHON_EXE}/site-packages/ DESTINATION ${RSRC_DIR}/lib/${PYTHON_EXE}/site-packages/)
-
-# Update the files in share (e.g. python shebang's) to point to internally to the App
-# Run theses as two separate commands in case the first fails for some reason...
-execute_process(
-  COMMAND zsh -c "LC_ALL=C  find ${RSRC_DIR} -type f -exec sed -i '' \"s@${PYTHON_MYTHTV_SCRIPT_EXE}@${PYTHON_EXE}@g\" {} + ")
-execute_process(
-  COMMAND zsh -c "LC_ALL=C  find ${RSRC_DIR} -type f -exec sed -i '' \"s@${MYTHTV_INSTALL_PREFIX}@../Resources@g\" {} + ")
 
 # This function searches for the mythtv executable and library locations.
 # The output is divided into rpath'd files and hard-linked files.
@@ -353,73 +341,13 @@ set_target_properties(${APP_NAME} PROPERTIES
 foreach(EXENAME IN LISTS APP_EXES)
   set(EXE_FULL_PATH ${MYTHTV_INSTALL_PREFIX}/bin/${EXENAME})
   add_custom_command(
-    TARGET ${APP_NAME}
-    POST_BUILD
+    TARGET ${APP_NAME} POST_BUILD
     COMMENT "Copying in ${EXENAME}"
-    COMMAND
-      ${CMAKE_COMMAND} -E copy_if_different
-      "${EXE_FULL_PATH}"
-      ${MACOS_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EXE_FULL_PATH}" ${MACOS_DIR}
     COMMAND install_name_tool -rpath "@loader_path/../lib" "@loader_path/../Frameworks" ${MACOS_DIR}/${EXENAME}
     COMMAND install_name_tool -delete_rpath "@loader_path/../lib64" ${MACOS_DIR}/${EXENAME}
     COMMAND install_name_tool -add_rpath "${PKGMGR_LIB_DIR}" ${MACOS_DIR}/${EXENAME})
   list(APPEND QT_DARWIN_EXTRAS "-executable=${MACOS_DIR}/${EXENAME}")
-endforeach()
-
-#
-# Copy in the python library
-#
-add_custom_command(
-  TARGET ${APP_NAME}
-  POST_BUILD
-  COMMENT "Copying in python library"
-  COMMAND
-    ${CMAKE_COMMAND} -E copy_if_different
-    "${PYTHON_SOURCE_DYLIB}"
-    "${PYTHON_FMWK_FULL_DYLIB}")
-list(APPEND QT_DARWIN_EXTRAS "-executable=${PYTHON_FMWK_ROOT}/Python")
-
-#
-# Copy in the python executable and update it to link to the Python framework
-# 
-# Update python executable to link to framework's "Python" dylib
-execute_process(
-  COMMAND zsh -c "otool -L \"${PYTHON_SOURCE_EXE}\" | grep -e 'Python (' | sed 's@\ (.*@@'"
-    OUTPUT_VARIABLE OTOOL_OUT
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-# strip out any otool's appended line breaks and tabs
-string(REPLACE "\t" "" OTOOL_OUT ${OTOOL_OUT})
-
-add_custom_command(
-  TARGET ${APP_NAME}
-  POST_BUILD
-  COMMENT "Copying in the python executable"
-  COMMAND
-    ${CMAKE_COMMAND} -E copy_if_different
-    "${PYTHON_SOURCE_EXE}"
-    "${PYTHON_DEST_EXE}"
-  COMMAND install_name_tool -change ${OTOOL_OUT} "@executable_path/../Frameworks/Python.framework/Versions/${PYTHON_DOT_VERSION}/Python" ${PYTHON_DEST_EXE})
-list(APPEND QT_DARWIN_EXTRAS "-executable=${MACOS_DIR}/${PYTHON_EXE}")
-
-#
-# create python symlinks
-#
-add_custom_command(
-  TARGET ${APP_NAME}
-  POST_BUILD
-  COMMENT "Creating python symlinks"
-  COMMAND ${CMAKE_COMMAND} -E create_symlink "${PYTHON_EXE}" ${MACOS_DIR}/python
-  COMMAND ${CMAKE_COMMAND} -E create_symlink "${PYTHON_EXE}" ${MACOS_DIR}/python3)
-
-# find python .so files located in the Resources directory
-execute_process(
-    COMMAND zsh -c "find ${PYTHON_RSRC_LIB_DIR} -name \"*.so\""
-    OUTPUT_VARIABLE SOs_FOUND
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-string(REPLACE "\n" ";" SOs_FOUND ${SOs_FOUND})
-foreach(SO_NAME IN LISTS SOs_FOUND)
-  # Add flags so that macdeployqt allows the .sos to use the Framework
-  list(APPEND QT_DARWIN_EXTRAS "-executable=${SO_NAME}")
 endforeach()
 
 #
@@ -440,13 +368,9 @@ list(SORT DARWIN_EXTRA_LIBS)
 foreach(LIB_PATH_FULL IN LISTS DARWIN_EXTRA_LIBS)
   get_filename_component(LIB_NAME ${LIB_PATH_FULL} NAME)
   add_custom_command(
-    TARGET ${APP_NAME}
-    POST_BUILD
+    TARGET ${APP_NAME} POST_BUILD
     COMMENT "Copying in ${LIB_NAME}"
-    COMMAND
-      ${CMAKE_COMMAND} -E copy_if_different
-      "${LIB_PATH_FULL}"
-      ${FMWK_DIR})
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${LIB_PATH_FULL}" ${FMWK_DIR})
   # Add flags so that macdeployqt allows the plugins to use the Framework
   list(APPEND QT_DARWIN_EXTRAS "-executable=${FMWK_DIR}/${LIB_NAME}")
 endforeach()
@@ -468,30 +392,30 @@ if(MYTH_BUILD_PLUGINS)
   foreach(LIB_PATH_FULL IN LISTS DARWIN_PLUGIN_LIBS)
     get_filename_component(LIB_NAME ${LIB_PATH_FULL} NAME)
     add_custom_command(
-      TARGET ${APP_NAME}
-      POST_BUILD
+      TARGET ${APP_NAME} POST_BUILD
       COMMENT "Copying in ${LIB_NAME}"
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_if_different
-        "${LIB_PATH_FULL}"
-        ${PLUGINS_DIR})
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${LIB_PATH_FULL}" ${PLUGINS_DIR})
     # Add flags so that macdeployqt allows the plugins to use the Framework
     list(APPEND QT_DARWIN_EXTRAS "-executable=${PLUGINS_DIR}/${LIB_NAME}")
   endforeach()
-endif()
-
-#
-# create a symlink from Resources lib/plugins to allow discovery of plugins
-#
-if(MYTH_BUILD_PLUGINS)
   add_custom_command(
-    TARGET ${APP_NAME}
-    POST_BUILD
+    TARGET ${APP_NAME} POST_BUILD
     COMMENT "Creating mythplugins symlinks"
     COMMAND ${CMAKE_COMMAND} -E create_symlink "../../../PlugIns" ${RSRC_MYTHLIB_DIR}/plugins)
 endif()
 
-message(STATUS "Build complete, now moving onto Linking and macdeployqt")
+#
+# create a portable python framework
+# This needs to be done after the App bundle variables and structure are established
+#
+include(DarwinEmbedPython.cmake)
+# Add all python related binaries to the QT_DARWIN_EXTRAS for macdeployqt cleanup
+list(APPEND QT_DARWIN_EXTRAS "-executable=${PYTHON_FMWK_ROOT}/Python")
+list(APPEND QT_DARWIN_EXTRAS "-executable=${MACOS_DIR}/${PYTHON_EXE}")
+foreach(SO_NAME IN LISTS PYTHON_SOS_FOUND)
+  # Add flags so that macdeployqt allows the .sos to use the Framework
+  list(APPEND QT_DARWIN_EXTRAS "-executable=${SO_NAME}")
+endforeach()
 
 #
 # Run macdeployqt to add both the QT frameworks and any missing libraries into
@@ -499,8 +423,7 @@ message(STATUS "Build complete, now moving onto Linking and macdeployqt")
 #
 find_program(MACDEPLOYQT_EXECUTABLE macdeployqt HINTS "${_qt_bin_dir}")
 add_custom_command(
-  TARGET ${APP_NAME}
-  POST_BUILD
+  TARGET ${APP_NAME} POST_BUILD
   COMMENT "Running macdeployqt, this will take a while..."
   COMMAND ${MACDEPLOYQT_EXECUTABLE} "${APP_NAME}.app" ${QT_DARWIN_EXTRAS}
   WORKING_DIRECTORY ${BUILD_DIR})
@@ -514,14 +437,15 @@ add_custom_command(
 #   https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Introduction/Introduction.html
 #
 add_custom_command(
-  TARGET ${APP_NAME}
-  POST_BUILD
+  TARGET ${APP_NAME} POST_BUILD
   COMMENT "Update the Application Info.plist"
   COMMAND /usr/libexec/PlistBuddy -c \"Add :ATSApplicationFontsPath string share/mythtv/fonts\" ${PLIST_FILE}
   COMMAND /usr/libexec/PlistBuddy -c \"Add :CFBundleAllowMixedLocalizationsbool bool true\" ${PLIST_FILE}
   COMMAND /usr/libexec/PlistBuddy -c \"Set :CFBundleExecutable ${APP_NAME}.sh\" ${PLIST_FILE}
+  COMMAND /usr/libexec/PlistBuddy -c \"Delete :CFBundleName\" ${PLIST_FILE}
   COMMAND /usr/libexec/PlistBuddy -c \"Set :CFBundleSignature org.mythtv.${APP_NAME}\" ${PLIST_FILE}
-  COMMAND /usr/libexec/PlistBuddy -c \"Add :NSAppleScriptEnabled bool false\" ${PLIST_FILE}
+  COMMAND /usr/libexec/PlistBuddy -c \"Set :CSResourcesFileMapped false\" ${PLIST_FILE}
+  COMMAND /usr/libexec/PlistBuddy -c \"Add :NSAppleScriptEnabled string NO\" ${PLIST_FILE}
   COMMAND /usr/libexec/PlistBuddy -c \"Add :NSPrincipalClass string NSApplication\" ${PLIST_FILE}
   COMMAND /usr/libexec/PlistBuddy -c \"Add :NSSupportsAutomaticGraphicsSwitching bool true\" ${PLIST_FILE})
 
