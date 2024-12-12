@@ -50,6 +50,7 @@ file(COPY "${PYTHON_SOURCE_INC}/pyconfig.h" DESTINATION ${PYTHON_RSRC_INC_DIR}/$
 #
 # Copy lib files into Resources/lib
 file(COPY "${PYTHON_SOURCE_LIB}/" DESTINATION ${PYTHON_RSRC_LIB_DIR}
+  PATTERN "*dist-info*" EXCLUDE
   PATTERN "*ansible*" EXCLUDE
   PATTERN "*lint*" EXCLUDE
   PATTERN "*mark*" EXCLUDE
@@ -68,6 +69,7 @@ execute_process(
 # into the portable python-framework
 if(NOT PYTHON_VENV_PATH STREQUAL "")
   file(COPY ${PYTHON_VENV_PATH}/ DESTINATION ${PYTHON_RSRC_LIB_DIR}
+    PATTERN "*dist-info*" EXCLUDE
     PATTERN "*ansible*" EXCLUDE
     PATTERN "*lint*" EXCLUDE
     PATTERN "*mark*" EXCLUDE
@@ -94,7 +96,7 @@ list(REMOVE_DUPLICATES PYTHON_SOS_FOUND)
 #
 message(STATUS "Creating the Framework")
 # Copy the pyconfig.h files into the Python Framework's include dir
-file(COPY ${PYTHON_ROOT_DIR}/include/${PYTHON_EXE}/pyconfig.h DESTINATION ${PYTHON_FMWK_INC_DIR}/${PYTHON_EXE}/)
+file(COPY ${PYTHON_ROOT_DIR}/include/${PYTHON_EXE}/pyconfig.h DESTINATION ${PYTHON_FMWK_INC_DIR}/)
 
 # Copy the Info.plist into Python Framework Resources dir
 file(COPY "${PYTHON_ROOT_DIR}/Resources/Info.plist" DESTINATION ${PYTHON_FMWK_ROOT}/Resources)

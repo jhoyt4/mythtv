@@ -65,7 +65,7 @@ case $STATUS in
       exit 0
     ;;
   *)
-    cat $STATUS > notarization${NOTA_FILE}.log
+    cat $STATUS > ${NOTA_FILE}.log
     echo "----- ${NOTA_FILE} Notarization Failud or Timeout"
     exit 1
 esac

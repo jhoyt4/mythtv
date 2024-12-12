@@ -440,14 +440,17 @@ add_custom_command(
   TARGET ${APP_NAME} POST_BUILD
   COMMENT "Update the Application Info.plist"
   COMMAND /usr/libexec/PlistBuddy -c \"Add :ATSApplicationFontsPath string share/mythtv/fonts\" ${PLIST_FILE}
-  COMMAND /usr/libexec/PlistBuddy -c \"Add :CFBundleAllowMixedLocalizationsbool bool true\" ${PLIST_FILE}
-  COMMAND /usr/libexec/PlistBuddy -c \"Set :CFBundleExecutable ${APP_NAME}.sh\" ${PLIST_FILE}
-  COMMAND /usr/libexec/PlistBuddy -c \"Delete :CFBundleName\" ${PLIST_FILE}
-  COMMAND /usr/libexec/PlistBuddy -c \"Set :CFBundleSignature org.mythtv.${APP_NAME}\" ${PLIST_FILE}
+  COMMAND /usr/libexec/PlistBuddy -c \"Add :CFBundleAllowMixedLocalizations bool true\" ${PLIST_FILE}
   COMMAND /usr/libexec/PlistBuddy -c \"Set :CSResourcesFileMapped false\" ${PLIST_FILE}
-  COMMAND /usr/libexec/PlistBuddy -c \"Add :NSAppleScriptEnabled string NO\" ${PLIST_FILE}
+  COMMAND /usr/libexec/PlistBuddy -c \"Add :NSAppleScriptEnabled bool false\" ${PLIST_FILE}
   COMMAND /usr/libexec/PlistBuddy -c \"Add :NSPrincipalClass string NSApplication\" ${PLIST_FILE}
   COMMAND /usr/libexec/PlistBuddy -c \"Add :NSSupportsAutomaticGraphicsSwitching bool true\" ${PLIST_FILE})
+
+#  COMMAND /usr/libexec/PlistBuddy -c \"Delete :CFBundleName\" ${PLIST_FILE}
+#  COMMAND /usr/libexec/PlistBuddy -c \"Set :CFBundleExecutable ${APP_NAME}.sh\" ${PLIST_FILE}
+#  COMMAND /usr/libexec/PlistBuddy -c \"Set :CFBundleSignature mythtv\" ${PLIST_FILE}
+#  COMMAND /usr/libexec/PlistBuddy -c \"Add :LSMinimumSystemVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}\" ${PLIST_FILE}
+
 
 #
 # Install App to the install prefix.
@@ -479,7 +482,7 @@ if(DARWIN_GENERATE_DISTRIBUTION)
 
   # Custom Inputs to Bundle
   set(CPACK_BUNDLE_NAME ${APP_NAME})
-  set(CPACK_BUNDLE_STARTUP_COMMAND ${CMAKE_SOURCE_DIR}/${APP_NAME}.sh)
+  #set(CPACK_BUNDLE_STARTUP_COMMAND ${CMAKE_SOURCE_DIR}/${APP_NAME}.sh)
   set(CPACK_APPLE_BUNDLE_ID ${MACOSX_BUNDLE_GUI_IDENTIFIER})
   set(CPACK_BUNDLE_PLIST ${PLIST_FILE})
   set(CPACK_BUNDLE_ICON_FILE "${CMAKE_SOURCE_DIR}/${APP_NAME}.icns}")

@@ -11,6 +11,9 @@ endif()
 set(APP_FILE ${CPACK_TEMPORARY_DIRECTORY}/${CPACK_PACKAGE_NAME}.app)
 set(PLIST_FILE "${APP_FILE}/Contents/Info.plist")
 
+execute_process(
+  COMMAND /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable ${CPACK_PACKAGE_NAME}.sh" "${PLIST_FILE}")
+
 if(DARWIN_SIGNING_ID STREQUAL "")
   return()
 endif()
