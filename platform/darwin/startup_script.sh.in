@@ -30,4 +30,4 @@ PATH=$(pwd):$PATH
 export MYTHTVDIR="$APP_DIR/Contents/Resources"
 
 cd $BASEDIR
-./mythbackend $@
+./@APP_EXE_NAME@ $@

@@ -13,12 +13,17 @@ if(NOT DARWIN_BACKEND_BUNDLE AND NOT DARWIN_FRONTEND_BUNDLE)
 endif()
 
 # JGH TODOs
-# - python - strip lib/python3 to bare necessities
-# - creat symlinks for mythtv exes in Resources
+# - Fix startup script
+#     On Sequoia, it a properly signed and notarized app is getting an error
+#     that the os cannot verify the download.  To get it to open, the app bundle
+#     needs to be approved in control panel -> privacy and security
+#     see if there's a way to fix this.
+#       maybe hardened runtime?
 # - clean up work
 # - automate the process for mythfrontend and mythbackend
 
 set(APP_NAME mythfrontend)
+set(APP_EXE_NAME ${APP_NAME})
 set(APP_EXES ${APP_NAME} mythpreviewgen mythutil)
 
 # Can use cmake features introduced in 3.21.
@@ -221,7 +226,7 @@ file(COPY ${APP_NAME}.icns DESTINATION ${RSRC_DIR})
 
 # Copy the application startup script into the Resources directory.
 # the python executable in the script needs to be updated
-configure_file("${CMAKE_SOURCE_DIR}/${APP_NAME}.sh.in" "${MACOS_DIR}/${APP_NAME}.sh" @ONLY)
+configure_file("${CMAKE_SOURCE_DIR}/startup_script.sh.in" "${MACOS_DIR}/${APP_NAME}.sh" @ONLY)
 
 # Update the files in share (e.g. python shebang's) to point to internally to the App
 # Run theses as two separate commands in case the first fails for some reason...
@@ -424,35 +429,22 @@ endforeach()
 #
 # Run macdeployqt to add both the QT frameworks and any missing libraries into
 # the Application Bundle.
+# See the following site for more details on Info.plist entries:
+#   https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Introduction/Introduction.html
 #
 find_program(MACDEPLOYQT_EXECUTABLE macdeployqt HINTS "${_qt_bin_dir}")
 add_custom_command(
   TARGET ${APP_NAME} POST_BUILD
   COMMENT "Running macdeployqt, this will take a while..."
   COMMAND ${MACDEPLOYQT_EXECUTABLE} "${APP_NAME}.app" ${QT_DARWIN_EXTRAS}
-  WORKING_DIRECTORY ${BUILD_DIR})
-
-#
-# Clean up the App bundle after macdeployqt
-#
-
-#
-# See the following site for more details on Info.plist entries:
-#   https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Introduction/Introduction.html
-#
-add_custom_command(
-  TARGET ${APP_NAME} POST_BUILD
-  COMMENT "Update the Application Info.plist"
-  COMMAND /usr/libexec/PlistBuddy -c \"Add :ATSApplicationFontsPath string share/mythtv/fonts\" ${PLIST_FILE}
+  COMMAND /usr/libexec/PlistBuddy -c \"Add :ATSApplicationFontsPath string share/mythtv/fonts\" ${PLIST_FILE}ncc
+  COMMAND /usr/libexec/PlistBuddy -c \"Set :CFBundleExecutable ${APP_NAME}.sh\" ${PLIST_FILE}
   COMMAND /usr/libexec/PlistBuddy -c \"Add :CFBundleAllowMixedLocalizations bool true\" ${PLIST_FILE}
-  COMMAND /usr/libexec/PlistBuddy -c \"Delete :CFBundleName\" ${PLIST_FILE}
   COMMAND /usr/libexec/PlistBuddy -c \"Set :CSResourcesFileMapped false\" ${PLIST_FILE}
   COMMAND /usr/libexec/PlistBuddy -c \"Add :NSAppleScriptEnabled bool false\" ${PLIST_FILE}
   COMMAND /usr/libexec/PlistBuddy -c \"Add :NSPrincipalClass string NSApplication\" ${PLIST_FILE}
-  COMMAND /usr/libexec/PlistBuddy -c \"Add :NSSupportsAutomaticGraphicsSwitching bool true\" ${PLIST_FILE})
-
-#  COMMAND /usr/libexec/PlistBuddy -c \"Set :CFBundleExecutable ${APP_NAME}.sh\" ${PLIST_FILE}
-
+  COMMAND /usr/libexec/PlistBuddy -c \"Add :NSSupportsAutomaticGraphicsSwitching bool true\" ${PLIST_FILE}
+  WORKING_DIRECTORY ${BUILD_DIR})
 
 #
 # Install App to the install prefix.
@@ -484,7 +476,6 @@ if(DARWIN_GENERATE_DISTRIBUTION)
 
   # Custom Inputs to Bundle
   set(CPACK_BUNDLE_NAME ${APP_NAME})
-  #set(CPACK_BUNDLE_STARTUP_COMMAND ${CMAKE_SOURCE_DIR}/${APP_NAME}.sh)
   set(CPACK_APPLE_BUNDLE_ID ${MACOSX_BUNDLE_GUI_IDENTIFIER})
   set(CPACK_BUNDLE_PLIST ${PLIST_FILE})
   set(CPACK_BUNDLE_ICON_FILE "${CMAKE_SOURCE_DIR}/${APP_NAME}.icns}")
