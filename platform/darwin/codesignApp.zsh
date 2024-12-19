@@ -72,6 +72,7 @@ echo $CS_STATUS
 
 case $CS_STATUS in
   "")
+    #curl --remote-name --remote-time ${APP}
     echo "+++++ ${APP} Signing Success"
     exit 0
     ;;

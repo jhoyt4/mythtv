@@ -334,7 +334,8 @@ endif()
 
 # Set default macdeployqt flags
 set(QT_DARWIN_EXTRAS -verbose=1
-                     -qmlimport=${_QT_BASE}/qml/)
+                     -qmlimport=${_QT_BASE}/qml/
+                     -appstore-compliant)
 
 # activate generation of the app bundle and point the application's rpath to 
 # the frameworks where all dylibs must be stored

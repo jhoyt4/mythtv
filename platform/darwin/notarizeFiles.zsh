@@ -61,6 +61,7 @@ case $STATUS in
   *Accepted*)
     echo " +++++ Notaization Accepted"
       xcrun stapler staple "${NOTA_FILE}"
+      #curl --remote-name --remote-time ${APP}
       echo "+++ ${NOTA_FILE} Notarization Success"
       exit 0
     ;;
