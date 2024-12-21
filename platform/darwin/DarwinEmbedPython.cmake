@@ -63,39 +63,39 @@ list(APPEND PYTHON_EXCLUDES
   PATTERN "*venv*" EXCLUDE
   PATTERN "*virtualenv*" EXCLUDE
   PATTERN "*YAML*" EXCLUDE
-  PATTERN "*yaml*" EXCLUDE)
-#  PATTERN "*site-packages*" EXCLUDE)
+  PATTERN "*yaml*" EXCLUDE
+  PATTERN "*site-packages*" EXCLUDE)
 
 # Copy lib files into Resources/lib
 file(COPY "${PYTHON_SOURCE_LIB}/" DESTINATION ${PYTHON_RSRC_LIB_DIR}
   ${PYTHON_EXCLUDES})
 
-## Homebrew symlinks the sites-enabled making another step required to copy in
-## those files correctly
-#list(REMOVE_AT PYTHON_EXCLUDES -1)
-#if(DETECT_MACPORTS EQUAL 0)
-#  file(COPY "${PYTHON_SOURCE_LIB}/site-packages" DESTINATION ${PYTHON_RSRC_LIB_DIR}/site-packages/
-#    ${PYTHON_EXCLUDES})
-#else()
-#  file(COPY "${HOMEBREW_PREFIX}/lib/${PYTHON_EXE}/site-packages/" DESTINATION ${PYTHON_RSRC_LIB_DIR}/site-packages/
-#    ${PYTHON_EXCLUDES})
-#  # cffi needs special handling
-#  file(REMOVE ${PYTHON_RSRC_LIB_DIR}/site-packages/_cffi_backend.cpython*.so)
-#  execute_process(
-#    COMMAND zsh -c "find ${HOMEBREW_PREFIX}/Cellar/cffi -name \"_cffi_backend.cpython*${PYTHON_VERSION}*.so\""
-#    OUTPUT_VARIABLE CFFI_SO_PATH
-#    OUTPUT_STRIP_TRAILING_WHITESPACE)
-#  string(REPLACE "\n" ";" CFFI_SO_PATH ${CFFI_SO_PATH})
-#  file(COPY ${CFFI_SO_PATH} DESTINATION ${PYTHON_RSRC_LIB_DIR}/site-packages/)
-#  # pycparser needs special handling
-#  file(REMOVE ${PYTHON_RSRC_LIB_DIR}/site-packages/pycparser)
-#  execute_process(
-#    COMMAND zsh -c "find ${HOMEBREW_PREFIX}/Cellar/pycparser -type d -name \"site-packages\"|grep ${PYTHON_DOT_VERSION}"
-#    OUTPUT_VARIABLE PYC_PARSER_PATH
-#    OUTPUT_STRIP_TRAILING_WHITESPACE)
-#  string(REPLACE "\n" ";" PYC_PARSER_PATH ${PYC_PARSER_PATH})
-#  file(COPY ${PYC_PARSER_PATH} DESTINATION ${PYTHON_RSRC_LIB_DIR}/site-packages/)
-#endif()
+# Homebrew symlinks the sites-enabled making another step required to copy in
+# those files correctly
+list(REMOVE_AT PYTHON_EXCLUDES -1)
+if(DETECT_MACPORTS EQUAL 0)
+  file(COPY "${PYTHON_SOURCE_LIB}/site-packages" DESTINATION ${PYTHON_RSRC_LIB_DIR}/site-packages/
+    ${PYTHON_EXCLUDES})
+elseif(DETECT_HOMEBREW EQUAL 0)
+  file(COPY "${HOMEBREW_PREFIX}/lib/${PYTHON_EXE}/site-packages/" DESTINATION ${PYTHON_RSRC_LIB_DIR}/site-packages/
+    ${PYTHON_EXCLUDES})
+  # cffi needs special handling
+  file(REMOVE ${PYTHON_RSRC_LIB_DIR}/site-packages/_cffi_backend.cpython*.so)
+  execute_process(
+    COMMAND zsh -c "find ${HOMEBREW_PREFIX}/Cellar/cffi -name \"_cffi_backend.cpython*${PYTHON_VERSION}*.so\""
+    OUTPUT_VARIABLE CFFI_SO_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REPLACE "\n" ";" CFFI_SO_PATH ${CFFI_SO_PATH})
+  file(COPY ${CFFI_SO_PATH} DESTINATION ${PYTHON_RSRC_LIB_DIR}/site-packages/)
+  # pycparser needs special handling
+  file(REMOVE ${PYTHON_RSRC_LIB_DIR}/site-packages/pycparser)
+  execute_process(
+    COMMAND zsh -c "find ${HOMEBREW_PREFIX}/Cellar/pycparser -type d -name \"site-packages\"|grep ${PYTHON_DOT_VERSION}"
+    OUTPUT_VARIABLE PYC_PARSER_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REPLACE "\n" ";" PYC_PARSER_PATH ${PYC_PARSER_PATH})
+  file(COPY ${PYC_PARSER_PATH} DESTINATION ${PYTHON_RSRC_LIB_DIR}/site-packages/)
+endif()
 
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E create_symlink "${PYTHON_EXE}" "${RSRC_DIR}/lib/python"
