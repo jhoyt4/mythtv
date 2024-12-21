@@ -68,11 +68,10 @@ list(APPEND PYTHON_EXCLUDES
 
 # Copy lib files into Resources/lib
 file(COPY "${PYTHON_SOURCE_LIB}/" DESTINATION ${PYTHON_RSRC_LIB_DIR}
-  ${PYTHON_EXCLUDES}
-  FOLLOW_SYMLINK_CHAIN)
+  ${PYTHON_EXCLUDES})
 
-# Homebrew sylminks the sites-enables so another step is required to copy in
-# those files separately
+# Homebrew symlinks the sites-enabled making another step required to copy in
+# those files correctly
 list(REMOVE_AT PYTHON_EXCLUDES -1)
 if(DETECT_MACPORTS EQUAL 0)
   file(COPY "${PYTHON_SOURCE_LIB}/site-packages" DESTINATION ${PYTHON_RSRC_LIB_DIR}/site-packages/
