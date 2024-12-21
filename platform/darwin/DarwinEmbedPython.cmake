@@ -70,14 +70,14 @@ list(APPEND PYTHON_EXCLUDES
 file(COPY "${PYTHON_SOURCE_LIB}/" DESTINATION ${PYTHON_RSRC_LIB_DIR}
   ${PYTHON_EXCLUDES})
 
-# Homebrew symlinks the sites-enabled making another step required to copy in
+# Homebrew symlinks the sites-packages making another step required to copy in
 # those files correctly
 list(REMOVE_AT PYTHON_EXCLUDES -1)
 if(DETECT_MACPORTS EQUAL 0)
-  file(COPY "${PYTHON_SOURCE_LIB}/site-packages" DESTINATION ${PYTHON_RSRC_LIB_DIR}/site-packages/
+  file(COPY "${PYTHON_SOURCE_LIB}/site-packages/" DESTINATION ${PYTHON_RSRC_LIB_DIR}/
     ${PYTHON_EXCLUDES})
 elseif(DETECT_HOMEBREW EQUAL 0)
-  file(COPY "${HOMEBREW_PREFIX}/lib/${PYTHON_EXE}/site-packages/" DESTINATION ${PYTHON_RSRC_LIB_DIR}/site-packages/
+  file(COPY "${HOMEBREW_PREFIX}/lib/${PYTHON_EXE}/site-packages/" DESTINATION ${PYTHON_RSRC_LIB_DIR}/
     ${PYTHON_EXCLUDES})
   # cffi needs special handling
   file(REMOVE ${PYTHON_RSRC_LIB_DIR}/site-packages/_cffi_backend.cpython*.so)
