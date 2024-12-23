@@ -85,7 +85,7 @@ execute_process(
 
 # If a virtual environment has been created, copy the bin and site-packages
 # into the portable python-framework
-if(NOT PYTHON_VENV_PATH STREQUAL "")
+if(PYTHON_VENV_PATH AND NOT PYTHON_VENV_PATH STREQUAL "")
   file(COPY ${PYTHON_VENV_PATH}/ DESTINATION ${PYTHON_RSRC_LIB_DIR}
     ${PYTHON_EXCLUDES})
 endif()

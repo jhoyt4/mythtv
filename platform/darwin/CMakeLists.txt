@@ -156,11 +156,13 @@ set(PYTHON_FMWK_INC_DIR ${PYTHON_FMWK_ROOT}/include)
 set(PYTHON_FMWK_LIB_DIR ${PYTHON_FMWK_ROOT}/lib)
 set(PYTHON_DEST_EXE ${MACOS_DIR}/${PYTHON_EXE})
 set(PYTHON_FMWK_FULL_DYLIB ${PYTHON_FMWK_ROOT}/Python)
-set(PYTHON_VENV_PATH $ENV{VIRTUAL_ENV}/lib/${PYTHON_EXE})
 set(PYTHON_SOURCE_EXE ${PYTHON_ROOT_DIR}/Resources/Python.app/Contents/MacOS/Python)
 set(PYTHON_SOURCE_INC ${PYTHON_ROOT_DIR}/include/${PYTHON_EXE})
 set(PYTHON_SOURCE_LIB ${PYTHON_ROOT_DIR}/lib/${PYTHON_EXE})
 set(PYTHON_SOURCE_DYLIB ${PYTHON_ROOT_DIR}/Python)
+if(DEFINED ENV{VIRTUAL_ENV})
+  set(PYTHON_VENV_PATH $ENV{VIRTUAL_ENV}/lib/${PYTHON_EXE})
+endif()
 
 # Create a variable to point to the python executable that lives in the MacOS
 # directory to allow correct pathing to the embedded python support libraries
