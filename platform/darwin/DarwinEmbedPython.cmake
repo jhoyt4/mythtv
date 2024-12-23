@@ -65,10 +65,10 @@ list(APPEND PYTHON_EXCLUDES
   PATTERN "*YAML*" EXCLUDE
   PATTERN "*yaml*" EXCLUDE)
 
-if(DETECT_MACPORTS EQUAL 0)
+if(MACPORTS)
   file(COPY "${PYTHON_SOURCE_LIB}/" DESTINATION ${PYTHON_RSRC_LIB_DIR}
     ${PYTHON_EXCLUDES})
-elseif(DETECT_HOMEBREW EQUAL 0)
+elseif(HOMEBREW)
   # Homebrew symlinks the sites-packages so we need to use shell commands to
   # perform the copy replacing symlinks with real files
   file(COPY "${PYTHON_SOURCE_LIB}/" DESTINATION ${PYTHON_RSRC_LIB_DIR}
