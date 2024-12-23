@@ -195,28 +195,35 @@ endif()
 # Start with the mythtv/share directory into the Resource directory.
 #
 message(STATUS "Copying in MythTV support files")
+message(VERBOSE "  Copying 'share' directory")
 file(COPY ${MYTHTV_FULL_DATADIR} DESTINATION ${RSRC_DIR}/share)
 
 # Copy the perl support files into Resources/lib.
+message(VERBOSE "  Copying perl files")
 file(COPY ${MYTHTV_INSTALL_PREFIX}/lib/perl5 DESTINATION ${RSRC_DIR}/lib)
 
 ## Copy the python support files into Resources/lib.
+message(VERBOSE "  Copying python files")
 file(COPY ${MYTHTV_INSTALL_PREFIX}/lib/${PYTHON_EXE} DESTINATION ${RSRC_DIR}/lib)
 
 # Copy the application icon into the Resources directory.
+message(VERBOSE "  Copying icons")
 file(COPY ${APP_NAME}.icns DESTINATION ${RSRC_DIR})
 
 # Copy the application startup script into the Resources directory.
 # the python executable in the script needs to be updated
+message(VERBOSE "  Copying startup script")
 configure_file("${CMAKE_SOURCE_DIR}/startup_script.sh.in" "${MACOS_DIR}/${APP_NAME}.sh" @ONLY)
 
 # Update the files in share (e.g. python shebang's) to point to internally to the App
 # Run theses as two separate commands in case the first fails for some reason...
+message(VERBOSE "  Fixing python shebangs")
 execute_process(
   COMMAND zsh -c "LC_ALL=C find ${RSRC_DIR} -type f -exec sed -i '' \"s^${PYTHON_MYTHTV_SCRIPT_EXE}^${PYTHON_EXE}^g\" {} + ")
 execute_process(
   COMMAND zsh -c "LC_ALL=C find ${RSRC_DIR} -type f -exec sed -i '' \"s^${MYTHTV_INSTALL_PREFIX}^../Resources^g\" {} + ")
 
+message(VERBOSE "  Copying fonts")
 # Find and copy in the Dejavu and liberation fonts
 execute_process(
   COMMAND zsh -c "find ${FONT_PATH} -name \"Deja*.ttf\" -o -name \"Liberation*.ttf\""
