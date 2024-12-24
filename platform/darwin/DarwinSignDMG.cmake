@@ -11,7 +11,7 @@ if(DARWIN_NOTARIZATION_KEYCHAIN STREQUAL "")
   return()
 endif()
 
-if(APP_SIGN_FAILURE OR APP_NOTARIZATION_FAILURE)
+if(CPACK_APP_SIGN_FAILURE OR CPACK_APP_NOTARIZATION_FAILURE)
   return()
 endif()
 
@@ -23,8 +23,9 @@ execute_process(
   RESULT_VARIABLE CS_OUT)
 
 if(NOT CS_OUT EQUAL 0)
-  set(DMG_SIGN_FAILURE TRUE)
+  set(CPACK_DMG_SIGN_FAILURE ON)
   message(FATAL_ERROR "DMG Code Signing Failure")
+  return()
 endif()
 
 message(STATUS "Notarizing the DMG Distribution File")
@@ -33,6 +34,6 @@ execute_process(
   RESULT_VARIABLE NOTA_OUT)
 
 if(NOT NOTA_OUT EQUAL 0)
-  set(DMG_NOTARIZATION_FAILURE TRUE)
+  set(CPACK_DMG_NOTARIZATION_FAILURE ON)
   message(FATAL_ERROR "DMG Notarization Failure")
 endif()

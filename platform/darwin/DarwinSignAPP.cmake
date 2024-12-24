@@ -16,12 +16,13 @@ endif()
 
 message(STATUS "Signing the Application")
 execute_process(
-  COMMAND zsh -c "${CMAKE_CURRENT_LIST_DIR}/codesignApp.zsh ${APP_FILE} \"${CPACK_DARWIN_SIGNING_ID}\" ${CPACK_ENTITLEMENTS_PLIST}"
+  COMMAND zsh -c "${CMAKE_CURRENT_LIST_DIR}/codesignApp.zsh ${APP_FILE} ${CPACK_ENTITLEMENTS_PLIST} \"${CPACK_DARWIN_SIGNING_ID}\""
   RESULT_VARIABLE CS_OUT)
 
 if(NOT CS_OUT EQUAL 0)
-  set(APP_SIGN_FAILURE TRUE)
+  set(CPACK_APP_SIGN_FAILURE ON)
   message(FATAL_ERROR "App Code Signing Failure")
+  return()
 endif()
 
 if(NOT DARWIN_NOTARIZATION_KEYCHAIN STREQUAL "")
@@ -32,6 +33,6 @@ if(NOT DARWIN_NOTARIZATION_KEYCHAIN STREQUAL "")
 endif()
 
 if(NOT NOTA_OUT EQUAL 0)
-  set(APP_NOTARIZATION_FAILURE TRUE)
+  set(CPACK_APP_NOTARIZATION_FAILURE ON)
   message(FATAL_ERROR "App Notarization Signing Failure")
 endif()

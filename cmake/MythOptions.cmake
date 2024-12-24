@@ -344,8 +344,6 @@ set(MYTH_JAVA_HOME
 # Darwin Related Options
 #
 if(APPLE)
-  option(DARWIN_BACKEND_BUNDLE
-         "Generate an application bundle for mythbackend." OFF)
   option(DARWIN_FRONTEND_BUNDLE
          "Generate an application bundle for mythfrontend." OFF)
   option(DARWIN_SIGNING_ID

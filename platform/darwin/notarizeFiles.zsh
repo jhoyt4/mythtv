@@ -59,13 +59,20 @@ STATUS=$(echo "$notaOutput" | grep "status:"| gsed 1d | gsed 's/^.*status: *//')
 echo "$STATUS"
 case $STATUS in
   *Accepted*)
-    echo " +++++ Notaization Accepted"
+    echo '\033[0;32m'" +++++ Notaization Accepted"'\033[m'
       xcrun stapler staple "${NOTA_FILE}"
-      echo "+++ ${NOTA_FILE} Notarization Success"
-      exit 0
+      echo '\033[0;32m'"+++++ ${NOTA_FILE} Notarization Success"'\033[m'
+      returnCode=0
     ;;
   *)
-    echo "----- ${NOTA_FILE} Notarization Failud or Timeout"
+    echo '\033[0;31m'"----- ${NOTA_FILE} Notarization Failud or Timeout"'\033[m'
     echo $notaOutput
-    exit 1
+    returnCode=1
 esac
+
+if [[ $NOTA_FILE =~ .*".app" ]]; then
+  # if properly notarized, verify that app will pass gateway inspection of system policies
+  echo "Verifying system policy compliance"
+  spctl --assess --verbose ${NOTA_FILE}
+fi
+exit $returnCode

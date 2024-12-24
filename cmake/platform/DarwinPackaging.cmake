@@ -7,7 +7,7 @@
 if(NOT APPLE)
   return()
 endif()
-if (NOT DARWIN_BACKEND_BUNDLE AND NOT DARWIN_FRONTEND_BUNDLE)
+if (NOT DARWIN_FRONTEND_BUNDLE)
   return()
 endif()
 

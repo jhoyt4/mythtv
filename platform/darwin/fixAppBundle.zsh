@@ -5,23 +5,52 @@
 # See the file LICENSE_FSF for licensing information.
 #
 
-#This application finds dylibs that macdeploy misses correcting their dylib linkes
+# This application finds dylibs that macdeploy misses correcting their dylib linkes
 # to point internally to the APP Bundle.
 
 APP_BUNDLE=$1
 PKGMGR_PREFIX=$2
 MYTHTV_INSTALL_PREFIX=$3
 
+APP_CONTENTS_DIR=$APP_BUNDLE/Contents
+APP_MACOS_DIR=$APP_BUNDLE/Contents/MacOS
 APP_FMWK_DIR=$APP_BUNDLE/Contents/Frameworks
-APP_PLUGIN_DIR=$APP_BUNDLE/Contents/PlugIns
+APP_PLUGINS_DIR=$APP_BUNDLE/Contents/PlugIns
+
+checkID(){
+  libFile=$1
+  # use otool to make sure the passed in file doesn't have PKGMGR_PREFIX or MYTHTV_INSTALL_PREFIX
+  # in the ID
+  libID=$(echo $(otool -D $libFile)| sed 's^.*: ^^')
+  case $libID in
+    $PKGMGR_PREFIX*|$MYTHTV_INSTALL_PREFIX*)
+      newID=${libFile#$APP_CONTENTS_DIR/}
+      newID="@executable_path/../$newID"
+      echo '\033[0;36m'"    installLibs: Correcting ID for $libFile"'\033[m'
+      NAME_TOOL_CMD="install_name_tool -id $newID $libFile"
+      eval "${NAME_TOOL_CMD}"
+    ;;
+  esac
+}
+
+checkRPATH(){
+  libFile=$1
+  libRPATH=$(/usr/bin/otool -l "$libFile"|grep -e "@loader_path/../lib")
+  if [ -n "$libRPATH" ]; then
+    echo '\033[0;36m'"    installLibs: Adding LC_RPATH to $libFile"'\033[m'
+    NAME_TOOL_CMD="install_name_tool -rpath \"@loader_path/../lib\" \"@loader_path/../Frameworks\" $libFile"
+    eval "${NAME_TOOL_CMD}"
+  fi
+
+}
 
 installLibs(){
   binFile=$1
-
+  # check if there are any shared libraries the are still linked against PKGMGR_PREFIX or MYTHTV_INSTALL_PREFIX
+  pathDepList=$(/usr/bin/otool -L "$binFile"|grep -e loader_path -e "$PKGMGR_PREFIX" -e "$MYTHTV_INSTALL_PREFIX")
+  pathDepList=$(echo "$pathDepList"| sed 's/.*://' | sed 's/(.*//')
+  if [ -z "$pathDepList" ] ; then return; fi
   loopCTR=0
-  # find all externally-linked libs and loop over them
-  pathDepList=$(/usr/bin/otool -L "$binFile"|grep -e "$PKGMGR_PREFIX" -e "$MYTHTV_INSTALL_PREFIX")
-  pathDepList=$(echo "$pathDepList"| sed 's^(.*^^')
   while read -r dep; do
     if [ "$loopCTR" = 0 ]; then
       echo '\033[0;36m'"    installLibs: Parsing $binFile for linked libraries"'\033[m'
@@ -31,61 +60,81 @@ installLibs(){
 
     # Parse the lib if it isn't null
     if [ -n "$lib" ]; then
-      #check if it is already installed in the framewrk, if so
-      #update the link
+      #check if it is already installed in the framewrk, if so update the link
       needsCopy=false
-      IN_APP_LIB=$(find "$APP_BUNDLE" -name "$lib" -print -quit)
-      case $IN_APP_LIB in
-        *Contents/Frameworks*)
-          newLink="@executable_path/../Frameworks/$lib"
+      recurse=false
+      inAPPlib=$(find "$APP_FMWK_DIR" "$APP_PLUGINS_DIR" -name "$lib" -print -quit)
+      case $inAPPlib in
+        *Frameworks*|*PlugIns*)
+          newLink="@executable_path/../${inAPPlib#$APP_CONTENTS_DIR/}"
+          #newLink="@executable_path/../Frameworks/$lib"
+          #newLink="@executable_path/../PlugIns/$lib"
         ;;
-        *Contents/PlugIns*)
-          newLink="@executable_path/../PlugIns/$lib"
-        ;;
+        # if not in the APP, check special handling or copy in recursively if necessary
         *)
           newLink="@executable_path/../Frameworks/$lib"
           needsCopy=true
+          case $lib in
+            # homebew soemtimes links the mysql dylib so point to the correct one already installed in the app bundle
+            *mysqlclient*|*mariadb*)
+              realLib=$(find "$APP_FMWK_DIR" -name "libmysqlclient*.dylib" -o -name "libmariadb*.dylib" -print -quit)
+              lib=${realLib##*/}
+              newLink="@executable_path/../PlugIns/$lib"
+              needsCopy=false
+            ;;
+            # homebrew incorrectly appends _arm64 when linking libhdhomerun
+            libhdhomerun*)
+              sourcePath=$(find "$PKGMGR_PREFIX" -name "libhdhomerun*.dylib" -print -quit)
+            ;;
+            # homebrew changes the cryptography path into a filname for some reason
+            cryptography*_rust.abi3.so)
+              sourcePath=$(find "$PKGMGR_PREFIX" -name "*_rust.abi3.so" -print -quit)
+            ;;
+            *)
+              sourcePath=$(find "$MYTHTV_INSTALL_PREFIX" "$PKGMGR_PREFIX" \( -name "$lib" -o -name "${binFile%%.*}.${lib##*.}" \) -print -quit)
+            ;;
+          esac
+          # Copy in any missing files
+          if $needsCopy; then
+            echo '\033[0;34m'"      +++ installLibs: Installing $lib into app"'\033[m'
+            cp -RHn "$sourcePath" "$APP_FMWK_DIR/$lib"
+            checkID "$APP_FMWK_DIR/$lib"
+            checkRPATH "$APP_FMWK_DIR/$lib"
+            # check the new library recursively
+            recurse=true
+          fi
         ;;
       esac
-
-      # Copy in any missing files
-      if $needsCopy; then
-        echo '\033[0;34m'"      +++installLibs: Installing $lib into app"'\033[m'
-        sourcePath=$(find "$MYTHTV_INSTALL_PREFIX" "$PKGMGR_PREFIX" -name "$lib" -print -quit)
-        destinPath="$APP_FMWK_DIR"
-        cp -RHn "$sourcePath" "$destinPath/$lib"
-        needRPATHFix=$(/usr/bin/otool -l "$destinPath/$lib"|grep -e "@loader_path/../lib")
-        if [ -n "$needRPATHFix" ]; then
-          NAME_TOOL_CMD="install_name_tool -rpath \"@loader_path/../lib\" \"@loader_path/../Frameworks\" $destinPath/$lib"
-          eval "${NAME_TOOL_CMD}"
-        fi
-        # this will need to be done recursively
-        recurse=true
-      fi
       # update the link in the app/executable to the new interal Framework
-      echo '\033[0;34m'"      ---installLibs: Updating $binFileName $lib link to internal lib"'\033[m'
+      echo '\033[0;34m'"      --- installLibs: Updating $binFile link for $lib"'\033[m'
       # it should now be in the App Bundle Frameworks, we just need to update the link
       NAME_TOOL_CMD="install_name_tool -change $dep $newLink $binFile"
       eval "${NAME_TOOL_CMD}"
       # If a new lib was copied in, recursively check it
       if  $needsCopy && $recurse ; then
-        echo '\033[0;34m'"      ^^^installLibs: Recursively install $lib"'\033[m'
-        installLibs "$destinPath/$lib"
+        echo '\033[0;34m'"      ^^^ installLibs: Recursively install $lib"'\033[m'
+        installLibs "$APP_FMWK_DIR/$lib"
       fi
     fi
   done <<< "$pathDepList"
 }
 
 # Look over all dylibs in the APP Bundle and correct any dylib path's that macdeployqt misses.
-for DIRECTORY in Resources PlugIns Frameworks; do
-  for file in $APP_BUNDLE/Contents/$DIRECTORY/**/*(.); do 
-    case $file in
-        *.dylib)
-          pathDepList=$(/usr/bin/otool -L "$file"|grep -e "$PKGMGR_PREFIX" -e "$MYTHTV_INSTALL_PREFIX")
-          if [ -n "$pathDepList" ] ; then
-            installLibs "$file"
-          fi
+for fileName in $APP_CONTENTS_DIR/**/*(.); do
+  if [[ -d $fileName || -L $fileName ]]; then continue; fi
+  tempFileName=${fileName##*/}
+  tempFileType=${tempFileName#.*}
+  # We only want binaries which are .dylib, .so, or have no file extension
+  if [[ $fileName =~ ".*\.(dylib|so)" || ! $tempFileType == *"."* ]]; then
+    # last check to make sure the file is a binary
+    if [[ $(file $fileName) =~ ".*"Mach-O".*" ]]; then
+      case $fileName in
+        *Frameworks*|*PlugIns*)
+          checkID $fileName
+          checkRPATH $fileName
         ;;
-    esac
-  done
+      esac
+      installLibs "$fileName"
+    fi
+  fi
 done
