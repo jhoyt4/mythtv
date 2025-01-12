@@ -359,14 +359,22 @@ jobs:
 
       - name: Update Homebrew Environment
         run: |
-          brew install ansible python-setuptools pip-tools
+          brew update && brew upgrade
           PKGMGR_PREFIX=$(brew --prefix)
-          echo "PKGMGR_PREFIX=$PKGMGR_PREFIX" >> $GITHUB_ENV
-          PYTHON_EXE=$(which python3)
-          echo "PYTHON_EXE=$PYTHON_EXE" >> $GITHUB_ENV
-          PYTHON_VERSION=$(python3 -c "import sys; print(str(sys.version_info.major)+str(sys.version_info.minor))")
-          echo "PYTHON_VERSION=$PYTHON_VERSION" >> $GITHUB_ENV
+          PYTHON_EXE=$(which $PKGMGR_PREFIX/bin/python3)
+          PYTHON_EXE="$(readlink -f $PYTHON_EXE)"
+          PYTHON_VERSION=$(${PYTHON_EXE} -c "import sys; print(str(sys.version_info.major)+str(sys.version_info.minor))")
+          PYTHON_DOT_VERSION=$(${PYTHON_EXE} -c "import sys; print(str(sys.version_info.major)+'.'+str(sys.version_info.minor))")
+          brew install ansible python-setuptools pip-tools virtualenv pyenv-virtualenv
+          PYTHON_SITE_PACK=$PKGMGR_PREFIX/lib/python$PYTHON_DOT_VERSION/site-packages
+          if [ ! -e $PYTHON_SITE_PACK/packaging ]; then
+            ln -s $PKGMGR_PREFIX/opt/python-packaging/lib/python$PYTHON_DOT_VERSION/site-packages/* $PYTHON_SITE_PACK/
+          fi
           ANSIBLE_EXTRA="ansible_python_interpreter=$PYTHON_EXE database_version=${{ matrix.os.database_version }}"
+          echo "PKGMGR_PREFIX=$PKGMGR_PREFIX" >> $GITHUB_ENV
+          echo "PYTHON_EXE=$PYTHON_EXE" >> $GITHUB_ENV
+          echo "PYTHON_VERSION=$PYTHON_VERSION" >> $GITHUB_ENV
+          echo "PYTHON_DOT_VERSION=$PYTHON_DOT_VERSION" >> $GITHUB_ENV
           echo "ANSIBLE_EXTRA=$ANSIBLE_EXTRA" >> $GITHUB_ENV
 
       - name: Setup build envinomental variables
