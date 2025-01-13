@@ -365,20 +365,23 @@ jobs:
           PYTHON_EXE="$(readlink -f $PYTHON_EXE)"
           PYTHON_VERSION=$(${PYTHON_EXE} -c "import sys; print(str(sys.version_info.major)+str(sys.version_info.minor))")
           PYTHON_DOT_VERSION=$(${PYTHON_EXE} -c "import sys; print(str(sys.version_info.major)+'.'+str(sys.version_info.minor))")
-          brew install ansible python-setuptools pip-tools virtualenv pyenv-virtualenv
-          PYTHON_SITE_PACK=$PKGMGR_PREFIX/lib/python$PYTHON_DOT_VERSION/site-packages
-          if [ ! -d $PYTHON_SITE_PACK/packaging ]; then
-            ln -s $PKGMGR_PREFIX/opt/python-packaging/lib/python$PYTHON_DOT_VERSION/site-packages/* $PYTHON_SITE_PACK/
-            echo "link made"
-          fi
-          echo "$PYTHON_SITE_PACK:"
-          echo $(ls $PYTHON_SITE_PACK)
           ANSIBLE_EXTRA="ansible_python_interpreter=$PYTHON_EXE database_version=${{ matrix.os.database_version }}"
           echo "PKGMGR_PREFIX=$PKGMGR_PREFIX" >> $GITHUB_ENV
           echo "PYTHON_EXE=$PYTHON_EXE" >> $GITHUB_ENV
           echo "PYTHON_VERSION=$PYTHON_VERSION" >> $GITHUB_ENV
           echo "PYTHON_DOT_VERSION=$PYTHON_DOT_VERSION" >> $GITHUB_ENV
           echo "ANSIBLE_EXTRA=$ANSIBLE_EXTRA" >> $GITHUB_ENV
+
+      - name: Install Ansible and Python necessities
+        run: |
+          brew install ansible python-setuptools python-packaging
+          PYTHON_SITE_PACK=$PKGMGR_PREFIX/lib/python$PYTHON_DOT_VERSION/site-packages
+          if [ ! -d $PYTHON_SITE_PACK/packaging ]; then
+            ln -s $PKGMGR_PREFIX/opt/python-packaging/lib/python$PYTHON_DOT_VERSION/site-packages/* $PYTHON_SITE_PACK/
+            echo "::core.notice link made"
+          fi
+          echo "echo "::core.notice $PYTHON_SITE_PACK:"
+          echo "echo "::core.notice $(ls $PYTHON_SITE_PACK)"
 
       - name: Setup build envinomental variables
         run: |
