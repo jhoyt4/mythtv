@@ -376,12 +376,10 @@ jobs:
         run: |
           brew install ansible python-setuptools python-packaging
           PYTHON_SITE_PACK=$PKGMGR_PREFIX/lib/python$PYTHON_DOT_VERSION/site-packages
-          if [ ! -d $PYTHON_SITE_PACK/packaging ]; then
-            ln -s $PKGMGR_PREFIX/opt/python-packaging/lib/python$PYTHON_DOT_VERSION/site-packages/* $PYTHON_SITE_PACK/
-            echo "::core.notice link made"
-          fi
-          echo "echo "::core.notice $PYTHON_SITE_PACK:"
-          echo "echo "::core.notice $(ls $PYTHON_SITE_PACK)"
+
+      - name: Debug code...
+        run: echo "echo "::core.notice $(find /Library/Frameworks/Python.framework/Versions/3.13)"
+        if: matrix.os.runner == 'macOS-13'
 
       - name: Setup build envinomental variables
         run: |
