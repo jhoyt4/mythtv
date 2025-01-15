@@ -361,8 +361,21 @@ jobs:
         run: |
           brew update && brew upgrade
           PKGMGR_PREFIX=$(brew --prefix)
-          PYTHON_EXE=$(which $PKGMGR_PREFIX/bin/python3)
-          PYTHON_EXE="$(readlink -f $PYTHON_EXE)"
+
+      - name: Fix Python install on Ventura
+        run: |
+          echo "Force remove currently installed python and ansible"
+          brew unlink --force python
+          brew unlink --force python3
+          brew unlink --force ansible
+          brew remove --force python3 ansible
+          echo "re-install requested python"
+          brew install --force --overwrite python3
+        if: matrix.os.runner == 'macOS-13'
+
+      - name: Setup Python and Ansible Variables
+        run: |
+          PYTHON_EXE=$PKGMGR_PREFIX/bin/python3
           PYTHON_VERSION=$(${PYTHON_EXE} -c "import sys; print(str(sys.version_info.major)+str(sys.version_info.minor))")
           PYTHON_DOT_VERSION=$(${PYTHON_EXE} -c "import sys; print(str(sys.version_info.major)+'.'+str(sys.version_info.minor))")
           ANSIBLE_EXTRA="ansible_python_interpreter=$PYTHON_EXE database_version=${{ matrix.os.database_version }}"
@@ -372,10 +385,9 @@ jobs:
           echo "PYTHON_DOT_VERSION=$PYTHON_DOT_VERSION" >> $GITHUB_ENV
           echo "ANSIBLE_EXTRA=$ANSIBLE_EXTRA" >> $GITHUB_ENV
 
-      - name: Install Ansible and Python necessities
+      - name: Install Ansible and missing Python necessities
         run: |
           brew install ansible python-setuptools python-packaging
-          PYTHON_SITE_PACK=$PKGMGR_PREFIX/lib/python$PYTHON_DOT_VERSION/site-packages
 
       - name: Debug code...
         run: echo "echo "::core.notice $(find /Library/Frameworks/Python.framework/Versions/3.13)"
