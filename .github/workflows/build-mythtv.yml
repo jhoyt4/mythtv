@@ -390,7 +390,7 @@ jobs:
           brew install ansible python-setuptools python-packaging
 
       - name: Debug code...
-        run: echo "echo "::core.notice $(find /Library/Frameworks/Python.framework/Versions/3.13)"
+        run: echo "echo "::core.notice $(find /Library/Frameworks/Python.framework/Versions/3.13 -print)"
         if: matrix.os.runner == 'macOS-13'
 
       - name: Setup build envinomental variables
