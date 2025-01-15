@@ -365,9 +365,9 @@ jobs:
       - name: Fix Python install on Ventura
         run: |
           echo "Force remove currently installed python and ansible"
-          brew unlink --force python
-          brew unlink --force python3
-          brew unlink --force ansible
+          brew unlink python
+          brew unlink python3
+          brew unlink ansible
           brew remove --force python3 ansible
           echo "re-install requested python"
           brew install --force --overwrite python3
