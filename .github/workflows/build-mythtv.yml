@@ -373,6 +373,10 @@ jobs:
           brew install --force --overwrite python3
         if: matrix.os.runner == 'macOS-13'
 
+      - name: Install Ansible and missing Python necessities
+        run: |
+          brew install ansible python-setuptools python-packaging
+
       - name: Setup Python and Ansible Variables
         run: |
           PYTHON_EXE=$PKGMGR_PREFIX/bin/python3
@@ -383,14 +387,6 @@ jobs:
           echo "PYTHON_VERSION=$PYTHON_VERSION" >> $GITHUB_ENV
           echo "PYTHON_DOT_VERSION=$PYTHON_DOT_VERSION" >> $GITHUB_ENV
           echo "ANSIBLE_EXTRA=$ANSIBLE_EXTRA" >> $GITHUB_ENV
-
-      - name: Install Ansible and missing Python necessities
-        run: |
-          brew install ansible python-setuptools python-packaging
-
-      - name: Debug code...
-        run: echo "echo "::core.notice $(find /Library/Frameworks/Python.framework/Versions/3.13 -print)"
-        if: matrix.os.runner == 'macOS-13'
 
       - name: Setup build envinomental variables
         run: |
