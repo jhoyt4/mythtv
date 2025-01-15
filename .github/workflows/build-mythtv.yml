@@ -364,11 +364,10 @@ jobs:
 
       - name: Fix Python install on Ventura
         run: |
-          echo "Force remove currently installed python and ansible"
+          echo "Force remove currently installed python"
           brew unlink python
           brew unlink python3
-          brew unlink ansible
-          brew remove --force python3 ansible
+          brew remove --force python3
           echo "re-install requested python"
           brew install --force --overwrite python3
         if: matrix.os.runner == 'macOS-13'
