@@ -313,6 +313,39 @@ void AudioOutputCA::CloseDevice()
         d->CloseAnalog();
 }
 
+template <class AudioDataType>
+static inline void ReorderSmpteToCA(AudioDataType *buf, uint frames)
+{
+    AudioDataType tmpLS;
+    AudioDataType tmpRS;
+    AudioDataType tmpRLs;
+    AudioDataType tmpRRs;
+    AudioDataType *buf2 = nullptr;
+    for (uint i = 0; i < frames; i++)
+    {
+        buf = buf2 = buf + 4;
+        tmpRLs = *buf++;
+        tmpRRs = *buf++;
+        tmpLS = *buf++;
+        tmpRS = *buf++;
+
+        *buf2++ = tmpLS;
+        *buf2++ = tmpRS;
+        *buf2++ = tmpRLs;
+        *buf2++ = tmpRRs;
+    }
+}
+
+static inline void ReorderSmpteToCA(void *buf, uint frames, AudioFormat format)
+{
+    switch(AudioOutputSettings::FormatToBits(format))
+    {
+        case  8: ReorderSmpteToCA((uchar *)buf, frames); break;
+        case 16: ReorderSmpteToCA((short *)buf, frames); break;
+        default: ReorderSmpteToCA((int   *)buf, frames); break;
+    }
+}
+
 /** Object-oriented part of callback */
 bool AudioOutputCA::RenderAudio(unsigned char *aubuf,
                                 int size, unsigned long long timestamp)
@@ -340,6 +373,7 @@ bool AudioOutputCA::RenderAudio(unsigned char *aubuf,
     // Verify channel alignment based on audio unit hardware property capabilities
     if (!m_passthru && (m_channels == 6 || m_channels == 8))
     {
+        ReorderSmpteToCA(aubuf, size / m_outputBytesPerFrame, m_outputFormat);
         bool hardwareIsSwapped = false;
         Boolean isWritable     = false;
 
@@ -1299,7 +1333,7 @@ int CoreAudioData::OpenAnalog()
             new_layout.mChannelLayoutTag = kAudioChannelLayoutTag_AudioUnit_5_1;
             break;
         case 8:
-            // L R C LFE Ls Rs Lc Rc
+            // L R C LFE Ls Rs Rls Rrs
             new_layout.mChannelLayoutTag = kAudioChannelLayoutTag_AudioUnit_7_1;
             break;
     }
